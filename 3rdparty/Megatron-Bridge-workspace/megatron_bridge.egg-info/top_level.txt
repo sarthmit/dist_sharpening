@@ -1,0 +1,2 @@
+is_megatron_bridge_installed
+megatron

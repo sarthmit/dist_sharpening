@@ -1,0 +1,10 @@
+is_megatron_bridge_installed.py
+pyproject.toml
+setup.py
+Megatron-Bridge/src/megatron/bridge/__init__.py
+Megatron-Bridge/src/megatron/bridge/package_info.py
+megatron_bridge.egg-info/PKG-INFO
+megatron_bridge.egg-info/SOURCES.txt
+megatron_bridge.egg-info/dependency_links.txt
+megatron_bridge.egg-info/requires.txt
+megatron_bridge.egg-info/top_level.txt
