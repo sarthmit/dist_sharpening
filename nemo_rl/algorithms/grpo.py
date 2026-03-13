@@ -220,6 +220,7 @@ def setup(
     dataset: AllTaskProcessedDataset,
     val_dataset: Optional[AllTaskProcessedDataset],
     processor: Optional[AutoProcessor] = None,
+    checkpoint_path_override: Optional[str] = None,
 ) -> tuple[
     ColocatablePolicyInterface,
     Optional[GenerationInterface],
@@ -268,6 +269,13 @@ def setup(
     # ==========================
     checkpointer = CheckpointManager(master_config["checkpointing"])
     last_checkpoint_path = checkpointer.get_latest_checkpoint_path()
+    if checkpoint_path_override is not None:
+        checkpoint_path_override = os.path.abspath(checkpoint_path_override)
+        if not os.path.isdir(checkpoint_path_override):
+            raise FileNotFoundError(
+                f"Checkpoint path does not exist or is not a directory: {checkpoint_path_override}"
+            )
+        last_checkpoint_path = checkpoint_path_override
     grpo_save_state: Optional[GRPOSaveState] = cast(
         Optional[GRPOSaveState], checkpointer.load_training_info(last_checkpoint_path)
     )

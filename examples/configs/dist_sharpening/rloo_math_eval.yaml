@@ -1,0 +1,38 @@
+# Evaluation config for RLOO checkpoints on multiple math datasets.
+# Uses the same loading path as training (see examples/run_rloo_eval.py).
+
+defaults: rloo_math_lighteval.yaml
+
+grpo:
+  # run_rloo_eval computes pass@k/maj@k for k in [1,2,4,8,16]
+  # so we need at least 16 generations per prompt.
+  num_generations_per_prompt: 16
+
+# Override validation datasets for evaluation.
+# Keep train dataset aligned with the original training config.
+data:
+  _override_: true
+  max_input_seq_length: ${policy.max_total_sequence_length}
+  shuffle: false
+  num_workers: 1
+
+  train:
+    dataset_name: MATH-lighteval
+    split: train
+    subset: default
+
+  validation:
+    - dataset_name: MATH-lighteval
+      split: test
+      subset: default
+    - dataset_name: AIME2024
+      repeat: 1
+    - dataset_name: DAPOMathAIME2024
+    - dataset_name: DAPOMath17K
+    - dataset_name: DeepScaler
+
+  default:
+    prompt_file: "examples/prompts/cot.txt"
+    system_prompt_file: null
+    processor: "math_hf_data_processor"
+    env_name: "math"

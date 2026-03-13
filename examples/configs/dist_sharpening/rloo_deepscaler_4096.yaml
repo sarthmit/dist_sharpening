@@ -1,18 +1,18 @@
 # GRPO Algorithm Configuration
 grpo:
-  num_prompts_per_step: 32
+  num_prompts_per_step: 64
   num_generations_per_prompt: 8
   max_rollout_turns: 1 # for multi-turn rollouts. Math Environments just have 1 turn (answering the question)
   max_num_epochs: 100
-  max_num_steps: 500
+  max_num_steps: 1000
   normalize_rewards: true
   use_leave_one_out_baseline: true
   val_period: 20
   val_at_start: true
   val_at_end: true
   overlong_filtering: false
-  max_val_samples: 5000
-  val_batch_size: 5000
+  max_val_samples: 500
+  val_batch_size: 500
   seed: 42
   use_dynamic_sampling: false
   dynamic_sampling_max_gen_batches: 10
@@ -84,16 +84,16 @@ checkpointing:
   save_consolidated: false
 
 policy:
-  model_name: "Qwen/Qwen2.5-3B-Instruct"
+  model_name: "Qwen/Qwen3-4B-Instruct-2507"
   tokenizer:
     name: ${policy.model_name} ## specify if you'd like to use a tokenizer different from the model's default
     chat_template_kwargs: null # can be used to pass kwargs to the chat template, e.g., enable_thinking=true
   hf_config_overrides: {} 
-  train_global_batch_size: 256
-  train_micro_batch_size: 4
+  train_global_batch_size: 512
+  train_micro_batch_size: 2
   generation_batch_size: 32 # Only used when generating using HF backend
   logprob_batch_size: ${policy.train_micro_batch_size}
-  max_total_sequence_length: 2048
+  max_total_sequence_length: 4096
   precision: "bfloat16"
   logprob_chunk_size: null
   offload_optimizer_for_logprob: false # Only useful for non-colocated generation since colocated generation will always offload optimizer to cuda before refit
@@ -104,7 +104,7 @@ policy:
     cpu_offload: False
     sequence_parallel: false
     activation_checkpointing: false
-    tensor_parallel_size: 1
+    tensor_parallel_size: 2
     context_parallel_size: 1
     custom_parallel_plan: null
     
@@ -153,7 +153,7 @@ policy:
     optimizer:
       optimizer: "adam"
       lr: 1.0e-6
-      min_lr: 5.0e-7
+      min_lr: 1.0e-7
       weight_decay: 0.01
       bf16: true
       fp16: false
@@ -298,12 +298,12 @@ data:
 
   # dataset
   train:
-    dataset_name: MATH-lighteval
+    dataset_name: DeepScaler
     split: train
     subset: default
   validation: 
-    dataset_name: MATH-lighteval
-    split: test
+    dataset_name: AIME2024
+    split: train
     subset: default
   # default settings for all datasets
   default:

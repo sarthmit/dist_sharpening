@@ -33,6 +33,14 @@ from nemo_rl.distributed.model_utils import (
 Tensor = TypeVar("Tensor", bound=torch.Tensor)
 
 
+class DistSharpeningConfig(TypedDict):
+    alpha: NotRequired[float]
+    beta_inv: NotRequired[float]
+    mode: NotRequired[str]
+    normalization: NotRequired[str]
+    weight: NotRequired[float]
+
+
 class ClippedPGLossConfig(TypedDict):
     reference_policy_kl_penalty: float
     reference_policy_kl_type: str
@@ -66,7 +74,9 @@ class ClippedPGLossConfig(TypedDict):
     force_on_policy_ratio: NotRequired[bool]
     # If True, add KL penalty to reward instead of loss (used by Reinforce++)
     use_kl_in_reward: NotRequired[bool]
-    # Custom reward function parameters (used in rloo.py)
+    # Custom reward function parameters (used in rloo.py).
+    # Prefer `dist_sharpening`; flat keys are kept for backward compatibility.
+    dist_sharpening: NotRequired[DistSharpeningConfig]
     alpha: NotRequired[float]
     beta_inv: NotRequired[float]
     mode: NotRequired[str]

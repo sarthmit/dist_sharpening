@@ -251,7 +251,7 @@ policy:
     temperature: 1.0
     top_p: 1.0
     top_k: null
-    ignore_eos_token: false
+    ignore_eos_token: true
     stop_token_ids: null
     stop_strings: null
     mcore_generation_config:
