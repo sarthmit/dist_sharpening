@@ -1,0 +1,84 @@
+# Evaluation config for math lighteval using eval_datasets.
+# Use with: `uv run python examples/eval.py --config examples/configs/dist_sharpening/eval_math_lighteval.yaml`
+
+# Inherit the base RLOO config to keep policy/env/generation defaults.
+defaults: rloo_math_lighteval.yaml
+
+# Evaluation uses validation only; no training loop is run in examples/eval.py.
+grpo:
+  # Keep eval batch size explicit
+  val_batch_size: 5000
+
+eval_metrics:
+  enabled: true
+  output_path: "metrics/base.json"
+  num_samples: 16
+  max_k: 16
+  # Optional: Monte Carlo sampling for maj@k (set to a positive int like 1000)
+  majk_num_samples: 1000
+
+# Override dataset/model defaults as needed via CLI overrides.
+data:
+  _override_: true
+  max_input_seq_length: ${policy.max_total_sequence_length}
+  shuffle: false
+  num_workers: 1
+
+  validation:
+    dataset_name: math-lighteval
+    split: test
+    subset: default
+
+  default:
+    prompt_file: "examples/prompts/cot.txt"
+    system_prompt_file: null
+    processor: "math_hf_data_processor"
+    env_name: "math"
+
+# Generation details (override as needed)
+policy:
+  generation:
+    backend: "vllm"
+    # max_new_tokens is generation length; max_model_len is total context window
+    max_new_tokens: ${policy.max_total_sequence_length}
+    temperature: 1.0
+    top_p: 1.0
+    top_k: null
+    ignore_eos_token: false
+    stop_token_ids: null
+    stop_strings: null
+    mcore_generation_config:
+      buffer_size_gb: 20
+      buffer_guaranteed_fraction: 0.1
+      num_cuda_graphs: 16
+      block_size_tokens: 256
+      use_cuda_graphs_for_non_decode_steps: true
+      enable_chunked_prefill: true
+      unified_memory_level: 0
+      max_tokens: 16384
+    vllm_cfg:
+      async_engine: false
+      precision: ${policy.precision}
+      kv_cache_dtype: "auto"
+      tensor_parallel_size: 1
+      pipeline_parallel_size: 1
+      expert_parallel_size: 1
+      gpu_memory_utilization: 0.6
+      max_model_len: ${policy.max_total_sequence_length}
+      enforce_eager: False
+      use_deep_gemm: False
+      num_last_layers_in_bf16: 0
+      num_first_layers_in_bf16: 0
+      enable_vllm_metrics_logger: true
+      vllm_metrics_logger_interval: 0.5
+    vllm_kwargs: {}
+    colocated:
+      enabled: true
+      resources:
+        gpus_per_node: 4
+        num_nodes: 1
+
+# Example overrides:
+# - Change dataset: data.validation.dataset_name=math500
+# - Change model: policy.model_name=Qwen/Qwen2.5-3B-Instruct
+# - Checkpoint selection is controlled by CLI flags: --last | --best | --base

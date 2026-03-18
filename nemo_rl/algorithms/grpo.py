@@ -198,6 +198,15 @@ class GRPOLoggerConfig(LoggerConfig):
     num_val_samples_to_print: int  # number of val samples to print to stdout
 
 
+class EvalMetricsConfig(TypedDict, total=False):
+    enabled: bool
+    output_path: str | None
+    num_samples: int
+    max_k: int
+    k_values: list[int]
+    majk_num_samples: int
+
+
 class MasterConfig(TypedDict):
     policy: PolicyConfig
     loss_fn: ClippedPGLossConfig
@@ -207,6 +216,7 @@ class MasterConfig(TypedDict):
     logger: GRPOLoggerConfig
     cluster: ClusterConfig
     checkpointing: CheckpointingConfig
+    eval_metrics: NotRequired[EvalMetricsConfig]
 
 
 # ===============================================================================

@@ -199,6 +199,15 @@ class GRPOLoggerConfig(LoggerConfig):
     num_val_samples_to_print: int  # number of val samples to print to stdout
 
 
+class EvalMetricsConfig(TypedDict, total=False):
+    enabled: bool
+    output_path: str | None
+    num_samples: int
+    max_k: int
+    k_values: list[int]
+    majk_num_samples: int
+
+
 class MasterConfig(TypedDict):
     policy: PolicyConfig
     loss_fn: ClippedPGLossConfig
@@ -208,6 +217,7 @@ class MasterConfig(TypedDict):
     logger: GRPOLoggerConfig
     cluster: ClusterConfig
     checkpointing: CheckpointingConfig
+    eval_metrics: NotRequired[EvalMetricsConfig]
 
 
 # ===============================================================================
@@ -1380,11 +1390,17 @@ def grpo_train(
     assert policy_generation is not None  # for mypy type check
 
     loss_config = master_config["loss_fn"]
+    dist_sharpening_cfg = loss_config.get("dist_sharpening", {})
     dist_sharpening = DistSharpeningReward(
-        alpha=loss_config.get("alpha", 0.0),
-        beta=loss_config.get("beta", 0.0),
-        mode=loss_config.get("mode", "none"),
-        normalization=loss_config.get("normalization", "none"),
+        alpha=dist_sharpening_cfg.get("alpha", loss_config.get("alpha", 0.0)),
+        beta_inv=dist_sharpening_cfg.get(
+            "beta_inv", loss_config.get("beta_inv", 0.0)
+        ),
+        mode=dist_sharpening_cfg.get("mode", loss_config.get("mode", "none")),
+        normalization=dist_sharpening_cfg.get(
+            "normalization", loss_config.get("normalization", "none")
+        ),
+        weight=dist_sharpening_cfg.get("weight", loss_config.get("weight", 1.0)),
     )
 
     # Check if we need to sync KV cache scales

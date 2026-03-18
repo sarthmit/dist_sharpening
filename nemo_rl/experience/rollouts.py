@@ -240,6 +240,8 @@ async def generate_responses_async(
 def calculate_rewards(
     batch: BatchedDataDict[DatumSpec],
     task_to_env: dict[str, EnvironmentInterface],
+    *,
+    return_extracted_answer: bool = False,
 ) -> EnvironmentReturn:
     """Calculate rewards for generated responses and get environment feedback.
 
@@ -284,7 +286,11 @@ def calculate_rewards(
         env_info = [batch["extra_env_info"][i] for i in indices]
 
         # Submit task to environment and store future
-        future = task_to_env[task_name].step.remote(messages, env_info)  # type: ignore # ray actor call
+        future = task_to_env[task_name].step.remote(
+            messages,
+            env_info,
+            return_extracted_answer=return_extracted_answer,
+        )  # type: ignore # ray actor call
         futures.append(future)
         future_to_indices[future] = indices
 

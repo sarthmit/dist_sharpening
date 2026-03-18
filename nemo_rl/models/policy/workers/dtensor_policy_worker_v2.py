@@ -14,6 +14,7 @@
 
 import contextlib
 import gc
+import os
 import warnings
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from typing import Any, Generator, Optional
@@ -246,11 +247,23 @@ class DTensorPolicyWorkerV2(AbstractPolicyWorker, ColocatablePolicyInterface):
             rank=0,  # Temporary, will be updated after distributed init
         )
 
-        # Set up distributed environment (returns FSDP2Manager)
-        distributed_manager = setup_distributed(
-            config=config,
-            runtime_config=runtime_config,
-        )
+        # Ray workers typically see a single logical GPU via CUDA_VISIBLE_DEVICES,
+        # but worker_groups.py still exports LOCAL_RANK as the placement-group bundle
+        # index. Torch/FSDP2 uses LOCAL_RANK during device-mesh setup, so clamp it to
+        # the local single-GPU view for distributed initialization.
+        prev_local_rank = os.environ.get("LOCAL_RANK")
+        os.environ["LOCAL_RANK"] = "0"
+        try:
+            # Set up distributed environment (returns FSDP2Manager)
+            distributed_manager = setup_distributed(
+                config=config,
+                runtime_config=runtime_config,
+            )
+        finally:
+            if prev_local_rank is None:
+                os.environ.pop("LOCAL_RANK", None)
+            else:
+                os.environ["LOCAL_RANK"] = prev_local_rank
         # Set instance attributes from distributed manager (tuple unpacking for mesh attributes)
         self.rank = torch.distributed.get_rank()
         self.device_mesh = distributed_manager.device_mesh

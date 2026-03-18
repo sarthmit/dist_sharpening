@@ -6,9 +6,13 @@ eval:
   k_value: 1
   save_path: null # Path to save evaluation results and configuration of the evaluation. Set to null to disable saving. Example: "results/eval_output" or "/path/to/evaluation_results"
 
+policy:
+  # Match RL configs: one knob to control total context window
+  max_total_sequence_length: 2048
+
 generation:
   backend: "vllm" # only vllm is supported for evaluation
-  max_new_tokens: ${generation.vllm_cfg.max_model_len}
+  max_new_tokens: ${policy.max_total_sequence_length}
   temperature: 0.0
   top_p: 1.0
   top_k: -1 # -1 means disable
@@ -23,7 +27,7 @@ generation:
     pipeline_parallel_size: 1
     expert_parallel_size: 1
     gpu_memory_utilization: 0.9
-    max_model_len: 2048
+    max_model_len: ${policy.max_total_sequence_length}
     enforce_eager: False
   colocated:
     # true: generation shares training GPUs
@@ -41,7 +45,7 @@ tokenizer:
   chat_template_kwargs: null # can be used to pass kwargs to the chat template, e.g., enable_thinking=true
 
 data:
-  max_input_seq_length: ${generation.vllm_cfg.max_model_len} # useless since we directly use prompts in evaluation
+  max_input_seq_length: ${policy.max_total_sequence_length} # useless since we directly use prompts in evaluation
   prompt_file: null
   system_prompt_file: null
   dataset_name: "aime2024"

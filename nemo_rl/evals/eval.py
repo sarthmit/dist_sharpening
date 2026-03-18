@@ -205,6 +205,7 @@ def eval_cons_k(
     num_tests_per_prompt: int,
     k: int,
     extracted_answers: list[str | None],
+    mc_num_samples: int | None = None,
 ) -> float:
     """Evaluate cons@k score using an unbiased estimator.
 
@@ -225,7 +226,7 @@ def eval_cons_k(
         # To fix@rayentian: How to deal with the case that there are multiple most common answers? Now we just return the first one.
         return Counter(answers).most_common(1)[0][0]
 
-    def eval_single_cons_k(
+    def eval_single_cons_k_exact(
         chunk_rewards: torch.Tensor, chunk_answers: list[str | None], n: int, k: int
     ) -> float:
         if chunk_answers is None or n == 0 or k > n:
@@ -245,6 +246,41 @@ def eval_cons_k(
                 correct_subsets += 1
 
         return correct_subsets / total_subsets
+    
+    def eval_single_cons_k_mc(
+        chunk_rewards: torch.Tensor,
+        chunk_answers: list[str | None],
+        n: int,
+        k: int,
+        num_samples: int,
+    ) -> float:
+        if chunk_answers is None or n == 0 or k > n:
+            return 0.0
+        if num_samples <= 0:
+            return 0.0
+        if k == 1:
+            # Majority is the single sampled answer.
+            total = 0
+            correct = 0
+            for _ in range(num_samples):
+                idx = torch.randint(0, n, (1,)).item()
+                total += 1
+                if chunk_rewards[idx].item() == 1.0:
+                    correct += 1
+            return correct / total if total > 0 else 0.0
+
+        total = 0
+        correct = 0
+        for _ in range(num_samples):
+            subset_indices = torch.randperm(n)[:k].tolist()
+            subset_answers = [chunk_answers[i] for i in subset_indices]
+            majority_answer = majority_vote(subset_answers)
+            reward_idx = subset_indices[subset_answers.index(majority_answer)]
+            reward = chunk_rewards[reward_idx].item()
+            total += 1
+            if reward == 1.0:
+                correct += 1
+        return correct / total if total > 0 else 0.0
 
     assert len(extracted_answers) == len(rewards), (
         "The number of extracted answers must be the same as the number of rewards"
@@ -264,12 +300,20 @@ def eval_cons_k(
     for i in range(num_groups):
         chunk_rewards = group_rewards[i]
         chunk_answers = group_extracted_answers[i]
+        
         assert len(chunk_rewards) == len(chunk_answers), (
             "The number of rewards and extracted answers must be the same"
         )
-        cons_k_score += eval_single_cons_k(
-            chunk_rewards, chunk_answers, len(chunk_answers), k
-        )
+        if mc_num_samples is not None:
+            score = eval_single_cons_k_mc(
+                chunk_rewards, chunk_answers, len(chunk_answers), k, mc_num_samples
+            )
+        else:
+            score = eval_single_cons_k_exact(
+                chunk_rewards, chunk_answers, len(chunk_answers), k
+            )
+        
+        cons_k_score += score
 
     return cons_k_score
 

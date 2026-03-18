@@ -14,8 +14,12 @@
 
 from nemo_rl.data.datasets.eval_datasets.aime import AIMEDataset
 from nemo_rl.data.datasets.eval_datasets.gpqa import GPQADataset
+from nemo_rl.data.datasets.eval_datasets.hmmt import HMMTDataset
 from nemo_rl.data.datasets.eval_datasets.local_math_dataset import LocalMathDataset
 from nemo_rl.data.datasets.eval_datasets.math import MathDataset
+from nemo_rl.data.datasets.eval_datasets.math500 import Math500EvalDataset
+from nemo_rl.data.datasets.eval_datasets.math_lighteval import MathLightEvalDataset
+from nemo_rl.data.datasets.eval_datasets.minerva import MinervaMathEvalDataset
 from nemo_rl.data.datasets.eval_datasets.mmlu import MMLUDataset
 from nemo_rl.data.datasets.eval_datasets.mmlu_pro import MMLUProDataset
 
@@ -23,10 +27,11 @@ from nemo_rl.data.datasets.eval_datasets.mmlu_pro import MMLUProDataset
 def load_eval_dataset(data_config):
     """Loads evaluation dataset."""
     dataset_name = data_config["dataset_name"]
+    dataset_name_lower = dataset_name.lower()
 
     # mmlu
-    if dataset_name.startswith("mmlu") and dataset_name != "mmlu_pro":
-        if dataset_name == "mmlu":
+    if dataset_name_lower.startswith("mmlu") and dataset_name_lower != "mmlu_pro":
+        if dataset_name_lower == "mmlu":
             base_dataset = MMLUDataset(
                 prompt_file=data_config["prompt_file"],
                 system_prompt_file=data_config["system_prompt_file"],
@@ -38,47 +43,72 @@ def load_eval_dataset(data_config):
                 prompt_file=data_config["prompt_file"],
                 system_prompt_file=data_config["system_prompt_file"],
             )
-    elif dataset_name == "mmlu_pro":
+    elif dataset_name_lower == "mmlu_pro":
         base_dataset = MMLUProDataset(
             prompt_file=data_config["prompt_file"],
             system_prompt_file=data_config["system_prompt_file"],
         )
     # aime
-    elif dataset_name == "aime2024":
+    elif dataset_name_lower == "aime2024":
         base_dataset = AIMEDataset(
             variant="2024",
             prompt_file=data_config["prompt_file"],
             system_prompt_file=data_config["system_prompt_file"],
         )
-    elif dataset_name == "aime2025":
+    elif dataset_name_lower == "aime2025":
         base_dataset = AIMEDataset(
             variant="2025",
             prompt_file=data_config["prompt_file"],
             system_prompt_file=data_config["system_prompt_file"],
         )
     # gpqa
-    elif dataset_name == "gpqa":
+    elif dataset_name_lower == "gpqa":
         base_dataset = GPQADataset(
             variant="main",
             prompt_file=data_config["prompt_file"],
             system_prompt_file=data_config["system_prompt_file"],
         )
-    elif dataset_name == "gpqa_diamond":
+    elif dataset_name_lower == "gpqa_diamond":
         base_dataset = GPQADataset(
             variant="diamond",
             prompt_file=data_config["prompt_file"],
             system_prompt_file=data_config["system_prompt_file"],
         )
     # math
-    elif dataset_name == "math":
+    elif dataset_name_lower == "math":
         base_dataset = MathDataset(
             variant="math_test",
             prompt_file=data_config["prompt_file"],
             system_prompt_file=data_config["system_prompt_file"],
         )
-    elif dataset_name == "math500":
-        base_dataset = MathDataset(
-            variant="math_500_test",
+    elif dataset_name_lower == "math500":
+        base_dataset = Math500EvalDataset(
+            prompt_file=data_config["prompt_file"],
+            system_prompt_file=data_config["system_prompt_file"],
+        )
+    elif dataset_name_lower in {"math-lighteval", "math_lighteval"}:
+        base_dataset = MathLightEvalDataset(
+            split=data_config.get("split", "test"),
+            subset=data_config.get("subset", "default"),
+            prompt_file=data_config["prompt_file"],
+            system_prompt_file=data_config["system_prompt_file"],
+        )
+    # hmmt
+    elif dataset_name_lower == "hmmt2024":
+        base_dataset = HMMTDataset(
+            variant="2024",
+            prompt_file=data_config["prompt_file"],
+            system_prompt_file=data_config["system_prompt_file"],
+        )
+    elif dataset_name_lower == "hmmt2025":
+        base_dataset = HMMTDataset(
+            variant="2025",
+            prompt_file=data_config["prompt_file"],
+            system_prompt_file=data_config["system_prompt_file"],
+        )
+    # minerva
+    elif dataset_name_lower == "minerva":
+        base_dataset = MinervaMathEvalDataset(
             prompt_file=data_config["prompt_file"],
             system_prompt_file=data_config["system_prompt_file"],
         )
@@ -101,8 +131,12 @@ def load_eval_dataset(data_config):
 __all__ = [
     "AIMEDataset",
     "GPQADataset",
+    "HMMTDataset",
     "LocalMathDataset",
     "MathDataset",
+    "Math500EvalDataset",
+    "MathLightEvalDataset",
+    "MinervaMathEvalDataset",
     "MMLUDataset",
     "MMLUProDataset",
 ]
