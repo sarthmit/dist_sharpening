@@ -103,6 +103,22 @@ def init_ray(log_dir: Optional[str] = None) -> None:
     env_vars.pop("RAY_EXPERIMENTAL_NOSET_CUDA_VISIBLE_DEVICES", None)
     runtime_env = {
         "env_vars": env_vars,  # Pass thru all user environment variables
+        # Keep the auto-packaged working_dir under Ray's 512MiB cap. These dirs
+        # are local-only artifacts (training-data dumps, caches, venvs, eval
+        # outputs, third-party builds, slurm logs) that workers don't need.
+        "excludes": [
+            ".git/",
+            "logs/",
+            "venvs/",
+            ".venv/",
+            ".cache/",
+            "eval_results/",
+            "3rdparty/",
+            "reasoning_gym_cache/",
+            "wandb/",
+            "slurm-*.out",
+            "*.log",
+        ],
     }
 
     cvd = os.environ.get("CUDA_VISIBLE_DEVICES", "ALL")

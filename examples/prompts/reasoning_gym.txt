@@ -1,0 +1,5 @@
+Think step-by-step to solve the following problem. Place your final answer inside <answer></answer> tags. Only the content between those tags is used for grading, so put exactly the answer there and nothing else.
+
+{}
+
+Let's think step-by-step.

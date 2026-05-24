@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --exclusive
-#SBATCH --time=5:59:00
+#SBATCH --time=23:59:00
 #SBATCH --mem=480G
 #SBATCH --gpus-per-node=h100:4
 
@@ -17,21 +17,24 @@ module load rust
 hf auth login --token "$HF_TOKEN"
 export TOKENIZERS_PARALLELISM=false
 
-if [[ "$#" -ne 5 ]]; then
-  echo "Usage: $0 <alpha> <beta_inv> <mode> <normalization> <weight>"
+if [[ "$#" -ne 6 ]]; then
+  echo "Usage: $0 <seq_len> <alpha> <beta_inv> <mode> <normalization> <weight>"
   exit 1
 fi
 
-alpha="$1"
-beta_inv="$2"
-mode="$3"
-normalization="$4"
-weight="$5"
-model_name="Qwen/Qwen2.5-3B-Instruct"
+seq_len="$1"
+alpha="$2"
+beta_inv="$3"
+mode="$4"
+normalization="$5"
+weight="$6"
+model_name="Qwen/Qwen3-1.7B"
 
 model_slug="${model_name##*/}"
 model_slug="${model_slug//\//-}"
-run_name="${model_slug}_${mode}_${alpha}_${beta_inv}_${weight}_${normalization}"
+
+config_path="examples/configs/dist_sharpening/rloo_deepscaler_${seq_len}.yaml"
+run_name="${model_slug}_deepscaler_${seq_len}_${mode}_${alpha}_${beta_inv}_${weight}_${normalization}"
 
 log_dir="logs/dist_sharpening/${run_name}"
 checkpoint_dir="/home/s/sarthmit/links/projects/aip-bengioy/sarthmit/dist_sharpening/${run_name}"
@@ -39,11 +42,12 @@ checkpoint_dir="/home/s/sarthmit/links/projects/aip-bengioy/sarthmit/dist_sharpe
 mkdir -p "$log_dir" "$checkpoint_dir"
 
 echo "Run name: ${run_name}"
+echo "Config: ${config_path}"
 echo "Log dir: ${log_dir}"
 echo "Checkpoint dir: ${checkpoint_dir}"
 
 UV_CACHE_DIR=.cache HF_HOME=.cache uv run python examples/run_rl.py \
-  --config examples/configs/dist_sharpening/rloo_math_lighteval.yaml \
+  --config "$config_path" \
   policy.model_name="$model_name" \
   loss_fn.dist_sharpening.alpha="$alpha" \
   loss_fn.dist_sharpening.beta_inv="$beta_inv" \

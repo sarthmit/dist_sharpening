@@ -685,6 +685,79 @@ def nemo_gym_data_processor(
     return output
 
 
+def reasoning_gym_data_processor(
+    datum_dict: dict[str, Any],
+    task_data_spec: TaskDataSpec,
+    tokenizer: TokenizerType,
+    max_seq_length: int,
+    idx: int,
+) -> DatumSpec:
+    """Process a reasoning_gym row into a DatumSpec for ReasoningGymEnvironment.
+
+    Expects rows produced by ``ReasoningGymDataset``:
+      - ``messages[0].content``: the question
+      - ``dataset_name``: the reasoning_gym env name (passed to the scorer)
+      - ``entry``: JSON-serialized reasoning_gym entry dict
+    """
+    from nemo_rl.data.datasets.response_datasets.reasoning_gym_dataset import (
+        ENV_TO_CATEGORY,
+    )
+
+    question = datum_dict["messages"][0]["content"]
+    dataset_name = datum_dict["dataset_name"]
+    extra_env_info = {
+        "dataset_name": dataset_name,
+        "entry": json.loads(datum_dict["entry"]),
+        # Per-sample category tag; read by `validate()` to emit
+        # `accuracy/<category>` keys. `ENV_TO_CATEGORY` covers every env
+        # present in the dataset's sampling plan, so a miss is a bug.
+        "category": ENV_TO_CATEGORY.get(dataset_name, "unknown"),
+    }
+
+    message_list = []
+    if task_data_spec.system_prompt:
+        message_list.append(
+            {"role": "system", "content": task_data_spec.system_prompt}
+        )
+    formatted_content = (
+        task_data_spec.prompt.format(question) if task_data_spec.prompt else question
+    )
+    message_list.append({"role": "user", "content": formatted_content})
+
+    message: str = tokenizer.apply_chat_template(  # type: ignore
+        message_list,
+        tokenize=False,
+        add_generation_prompt=True,
+        add_special_tokens=False,
+    )
+    token_ids = tokenizer(
+        message, return_tensors="pt", add_special_tokens=False
+    )["input_ids"][0]
+    message_log: LLMMessageLogType = [
+        {"role": "user", "content": message, "token_ids": token_ids}
+    ]
+
+    length = sum(len(m["token_ids"]) for m in message_log)
+
+    loss_multiplier = 1.0
+    if length >= max_seq_length:
+        for chat_message in message_log:
+            chat_message["token_ids"] = chat_message["token_ids"][
+                : min(4, max_seq_length // len(message_log))
+            ]
+        loss_multiplier = 0.0
+
+    output: DatumSpec = {
+        "message_log": message_log,
+        "length": length,
+        "extra_env_info": extra_env_info,
+        "loss_multiplier": loss_multiplier,
+        "idx": idx,
+        "task_name": datum_dict["task_name"],
+    }
+    return output
+
+
 # Processor registry. Key is the processor name, value is the processor function.
 # Note: We cast the literal dict to Dict[str, TaskDataProcessFnCallable] because
 # type checkers see each concrete function's signature as a distinct callable type.
@@ -702,6 +775,7 @@ PROCESSOR_REGISTRY: Dict[str, TaskDataProcessFnCallable] = cast(
         "sft_processor": sft_processor,
         "vlm_hf_data_processor": vlm_hf_data_processor,
         "nemo_gym_data_processor": nemo_gym_data_processor,
+        "reasoning_gym_data_processor": reasoning_gym_data_processor,
     },
 )
 

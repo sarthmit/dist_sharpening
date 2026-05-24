@@ -2760,6 +2760,7 @@ def async_grpo_train(
                     del prompt_batched_flat
 
                     rewards = repeated_batch["total_reward"]
+                    base_rewards = repeated_batch["total_reward"]
 
                     print(
                         f"  📊 Rewards stats: min={rewards.min():.4f}, max={rewards.max():.4f}, mean={rewards.mean():.4f}, std={rewards.std():.4f}"
@@ -2971,6 +2972,7 @@ def async_grpo_train(
 
                 metrics = {
                     "loss": train_results["loss"].numpy(),
+                    "base_reward": base_rewards.numpy(),
                     "reward": rewards.numpy(),
                     "grad_norm": train_results["grad_norm"].numpy(),
                     "mean_prompt_length": repeated_batch["length"].numpy(),
@@ -3006,6 +3008,7 @@ def async_grpo_train(
                         "lr",
                         "wd",
                         "reward",
+                        "base_reward",
                         "global_valid_seqs",
                         "global_valid_toks",
                         "mean_prompt_length",
@@ -3107,6 +3110,7 @@ def async_grpo_train(
 
             log_data = {"content": flat_messages_content}
             log_data["rewards"] = rewards.tolist()
+            log_data["base_rewards"] = base_rewards.tolist()
             log_data["generation_logprobs"] = train_data["generation_logprobs"].tolist()
             log_data["prev_logprobs"] = train_data["prev_logprobs"].tolist()
             log_data["input_lengths"] = input_lengths.tolist()

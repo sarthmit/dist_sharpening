@@ -1,0 +1,27 @@
+# Python
+*.pyc
+__pycache__/
+*.egg-info/
+
+# Virtualenvs / caches
+.venv/
+venvs/
+.cache/
+
+# SLURM job output + ad-hoc logs
+slurm-*.out
+*.log
+
+# Training/eval artifacts (large)
+logs/
+eval_results/
+reasoning_gym_cache/
+wandb/
+
+# Test artifacts
+tests/unit/unit_results.json
+tests/unit/unit_results/
+
+# Local scratch
+file_18.txt
+trial*.sh

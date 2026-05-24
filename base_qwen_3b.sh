@@ -27,7 +27,7 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 seq_len="$1"
-model_name="meta-llama/Llama-3.2-3B-Instruct"
+model_name="Qwen/Qwen2.5-3B-Instruct"
 
 model_slug="${model_name##*/}"
 model_slug="${model_slug//\//-}"

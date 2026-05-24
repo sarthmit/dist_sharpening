@@ -34,7 +34,7 @@ model_slug="${model_slug//\//-}"
 run_name="${model_slug}_${mode}_${alpha}_${beta_inv}_${weight}_${normalization}"
 
 log_dir="logs/dist_sharpening/${run_name}"
-checkpoint_dir="/home/s/sarthmit/links/projects/aip-glaj/sarthmit/dist_sharpening/${run_name}"
+checkpoint_dir="/home/s/sarthmit/links/projects/aip-bengioy/sarthmit/dist_sharpening/${run_name}"
 
 mkdir -p "$log_dir" "$checkpoint_dir"
 

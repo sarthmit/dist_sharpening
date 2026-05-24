@@ -1,0 +1,68 @@
+# Evaluation config for a checkpoint trained with reasoning_gym (dist_sharpening
+# fork). Inherits the training config so the prompt template, chat template,
+# data processor, environment, max-seq-length, and per-category validation
+# splits are byte-identical to what training used. Eval-specific overrides
+# below switch the policy/generation into "load real weights and decode" mode
+# and add an `eval` block with knobs the eval script reads.
+#
+# Required CLI override:
+#   ++eval.checkpoint=/path/to/hf_ckpt    # HF-format checkpoint
+#
+# Optional overrides:
+#   ++data.default_val_size=2000          # rows per category split
+#   ++eval.save_path=/path/to/results     # writes per-split JSONL + summary
+#   ++eval.greedy=false ++eval.temperature=0.6 ++eval.top_p=0.95
+defaults: "../../reasoning_gym/grpo_reasoning_gym.yaml"
+
+# 1000 rows per category, materialized once and persisted under
+# `data.default.cache_dir`. cache_dir points at PFN-RL's existing
+# rg-eval-dataset so the validation rows are byte-identical to PFN-RL evals
+# (same fingerprint: Qwen3-1.7B tokenizer, default_val_size=1000,
+# oversample_factor=2.0, seed=42, max_prompt_tokens=2048, prompt-file).
+data:
+  default_val_size: 1000
+  default:
+    cache_dir: "/home/s/sarthmit/links/scratch/PFN-RL/eval_datasets/rg-eval-dataset"
+    oversample_factor: 2.0
+  # Pin the dataset's length-filter tokenizer to the base model so the cached
+  # eval dataset key is shared across all checkpoints (every Qwen3-1.7B GRPO
+  # checkpoint bundles the identical tokenizer; cache key would otherwise
+  # include the per-checkpoint path).
+  train:
+    tokenizer_name: "Qwen/Qwen3-1.7B"
+
+eval:
+  # HuggingFace-format checkpoint directory. sbatch_eval.sh auto-converts a
+  # DCP or sharded-HF training checkpoint to <ckpt>/hf/ before invoking.
+  checkpoint: null
+  # Output directory; if set, writes split_<category>.jsonl per split + a
+  # summary.json with per-split accuracy. Set to null to disable.
+  save_path: null
+  # Cap rows per split (after dataset construction). null = use the full
+  # split size from data.default_val_size.
+  max_samples_per_split: null
+  # Per-prompt sample count (set >1 for pass@k with non-greedy decoding).
+  num_tests_per_prompt: 1
+  # k for pass@k. Must satisfy num_tests_per_prompt >= k.
+  k_value: 1
+  # Decoding. Default to deterministic greedy decoding so the score is
+  # reproducible across runs. Override greedy=false + temperature/top_p to
+  # match the on-policy distribution training sampled from.
+  greedy: true
+  temperature: 0.0
+  top_p: 1.0
+  # Per-batch prompt count. Falls back to grpo.val_batch_size if null.
+  val_batch_size: null
+  seed: 42
+
+policy:
+  # Filled at runtime from eval.checkpoint. Leaving null here forces an
+  # explicit override; mismatched checkpoints are the most common source of
+  # "trained great, eval is random".
+  model_name: null
+  generation:
+    temperature: ${eval.temperature}
+    top_p: ${eval.top_p}
+    top_k: -1
+    vllm_cfg:
+      load_format: auto

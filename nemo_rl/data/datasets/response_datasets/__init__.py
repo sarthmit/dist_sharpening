@@ -31,6 +31,9 @@ from nemo_rl.data.datasets.response_datasets.oasst import OasstDataset
 from nemo_rl.data.datasets.response_datasets.openmathinstruct2 import (
     OpenMathInstruct2Dataset,
 )
+from nemo_rl.data.datasets.response_datasets.reasoning_gym_dataset import (
+    ReasoningGymDataset,
+)
 from nemo_rl.data.datasets.response_datasets.refcoco import RefCOCODataset
 from nemo_rl.data.datasets.response_datasets.response_dataset import ResponseDataset
 from nemo_rl.data.datasets.response_datasets.squad import SquadDataset
@@ -48,6 +51,7 @@ DATASET_REGISTRY = {
     "MATH-lighteval": MathLightEvalDataset,
     "open_assistant": OasstDataset,
     "OpenMathInstruct-2": OpenMathInstruct2Dataset,
+    "ReasoningGym": ReasoningGymDataset,
     "refcoco": RefCOCODataset,
     "squad": SquadDataset,
     "tulu3_sft_mixture": Tulu3SftMixtureDataset,
@@ -96,6 +100,7 @@ __all__ = [
     "OasstDataset",
     "OpenAIFormatDataset",
     "OpenMathInstruct2Dataset",
+    "ReasoningGymDataset",
     "RefCOCODataset",
     "ResponseDataset",
     "SquadDataset",

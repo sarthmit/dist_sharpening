@@ -1,0 +1,194 @@
+# GRPO on Reasoning Gym. Inherits the deepscaler config so the entire training
+# setup (grpo, loss_fn, policy, optimizer, scheduler, checkpointing, logger,
+# cluster) is identical and runs are directly comparable to deepscaler. Only the
+# dataset, the model, and the reasoning_gym environment differ.
+defaults: "../configs/dist_sharpening/rloo_deepscaler_8192.yaml"
+
+grpo:
+  max_num_steps: 250
+  val_period: 25
+
+# Keep latest + best-val checkpoint, matching PFN-RL's reasoning_gym setup.
+# keep_top_k=1 + exclude_latest=True (checkpoint.py default) => 2 ckpts on disk:
+# the best-by-val:accuracy step and the most recent step.
+checkpointing:
+  metric_name: "val:accuracy"
+  higher_is_better: true
+  keep_top_k: 1
+  save_period: 50
+
+policy:
+  model_name: "Qwen/Qwen3-1.7B"
+  tokenizer:
+    # Qwen3-1.7B is a hybrid thinking model; disable thinking so generations are
+    # gradeable answers (reasoning_gym scores <answer> tags), not <think> traces.
+    chat_template_kwargs:
+      enable_thinking: false
+
+  # Match PFN-RL reasoning_gym LR (3e-6) instead of the deepscaler default (1e-6).
+  optimizer:
+    kwargs:
+      lr: 3.0e-6
+
+# Replace the deepscaler dataset entirely — reasoning_gym is a single logical task.
+data:
+  _override_: true
+  max_input_seq_length: ${policy.max_total_sequence_length}
+  shuffle: true
+  num_workers: 1
+  use_multiple_dataloader: false
+  # Per-category validation size. The `validation` list below is 10 entries
+  # (one per reasoning_gym category); each entry's `size` resolves to this.
+  default_val_size: 50
+  # Validation length-filter is strict (errors if survivors < size); some envs
+  # generate prompts that exceed max_prompt_tokens, so oversample to recover.
+  default_val_oversample_factor: 1.2
+
+  train:
+    dataset_name: "ReasoningGym"
+    size: 50000
+    items_per_env: 5000
+    # Some category mixes drop up to ~3% of generated prompts in length filtering;
+    # 20% headroom keeps survivors >= size without ballooning generation cost.
+    oversample_factor: 1.2
+    seed: ${grpo.seed}
+    split: "train"
+    # Prompt-length diagnostics + filter. When tokenizer_name is set the
+    # dataset logs min/p25/p50/p75/p90/p99/max of the tokenized prompt
+    # length (after chat template); rows over max_prompt_tokens are dropped.
+    tokenizer_name: ${policy.tokenizer.name}
+    max_prompt_tokens: 2048
+    # Uniform weighting: every reasoning_gym category gets an equal share, and
+    # each env within a category gets an equal slice of its category's weight.
+    # `arc` is merged into `cognition`; `probability` is not present.
+    category_fractions:
+      algebra: 0.1
+      algorithmic: 0.1
+      arithmetic: 0.1
+      cognition: 0.1
+      games: 0.1
+      geometry: 0.1
+      graphs: 0.1
+      logic: 0.1
+      code: 0.1
+      induction: 0.1
+
+  # One validation entry per reasoning_gym category. `setup_response_data`
+  # loads each entry independently and concatenates; `ReasoningGymEnvironment`
+  # emits per-category `accuracy/category/<cat>` metrics at val time.
+  validation:
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        algebra: 1.0
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        algorithmic: 1.0
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        arithmetic: 1.0
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        code: 1.0
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        cognition: 1.0
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        games: 1.0
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        geometry: 1.0
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        graphs: 1.0
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        induction: 1.0
+    - dataset_name: "ReasoningGym"
+      size: ${data.default_val_size}
+      items_per_env: 5000
+      seed: ${grpo.seed}
+      split: "validation"
+      tokenizer_name: ${data.train.tokenizer_name}
+      max_prompt_tokens: ${data.train.max_prompt_tokens}
+      oversample_factor: ${data.default_val_oversample_factor}
+      category_fractions:
+        logic: 1.0
+
+  default:
+    prompt_file: "examples/prompts/reasoning_gym.txt"
+    system_prompt_file: null
+    processor: "reasoning_gym_data_processor"
+    env_name: "reasoning_gym"
+    # Persist materialized reasoning_gym datasets here. The first run builds and
+    # saves them (~30 min for 50k train rows + 10 per-category val sets); later
+    # runs whose fingerprint matches (category_fractions, size, seed, tokenizer,
+    # max_prompt_tokens, oversample_factor) reload from disk instead of
+    # regenerating. train and each val split get distinct fingerprinted subdirs.
+    cache_dir: "/home/s/sarthmit/links/scratch/Projects/dist_sharpening/reasoning_gym_cache"
+
+env:
+  reasoning_gym: {}
